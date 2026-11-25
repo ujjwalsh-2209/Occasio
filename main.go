@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ujjwalsh-2209/event-booking/db"
@@ -12,7 +13,8 @@ func main() {
 	db.InitDB()
 	server := gin.Default()
 
-	server.GET("/events", getEvents) //GET, POST, PUT, PATCH, DELETE
+	server.GET("/events", getEvents)    //GET, POST, PUT, PATCH, DELETE
+	server.GET("/events/:id", getEvent) // /events1, /events5
 	server.POST("/events", createEvent)
 
 	server.Run(":8081") //localhost:8081
@@ -26,6 +28,23 @@ func getEvents(context *gin.Context) {
 		return
 	}
 	context.JSON(http.StatusOK, events)
+
+}
+
+func getEvent(context *gin.Context) {
+	eventId, err := strconv.ParseInt(context.Param("id"), 10, 64)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"message": "could not parse event id"})
+		return
+	}
+
+	event, err := models.GetEventByID(eventId)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"message": "could not fetch event"})
+		return
+	}
+
+	context.JSON(http.StatusOK, event)
 
 }
 
