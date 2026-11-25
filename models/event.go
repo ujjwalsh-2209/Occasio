@@ -1,0 +1,66 @@
+package models
+
+import (
+	"time"
+
+	"github.com/ujjwalsh-2209/event-booking/db"
+)
+
+type Event struct {
+	ID          int64
+	Name        string    `binding:"required"`
+	Discription string    `binding:"required"`
+	Location    string    `binding:"required"`
+	DateTime    time.Time `binding:"required"`
+	UserID      int
+}
+
+var events = []Event{}
+
+func (e Event) Save() error {
+	// later: add it to a database\
+
+	query := `INSERT INTO events(name, discription, location, dateTime, user_id) 
+	VALUES (
+		?,?,?,?,?
+	)
+	`
+	stmt, err := db.DB.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	result, err := stmt.Exec(e.Name, e.Discription, e.Location, e.DateTime, e.UserID)
+	if err != nil {
+		return err
+	}
+	id, err := result.LastInsertId()
+	e.ID = id
+	return err
+
+}
+
+func GetAllEvents() ([]Event, error) {
+
+	query := "SELECT * FROM events"
+	rows, err := db.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []Event
+
+	for rows.Next() {
+		var event Event
+		err := rows.Scan(&event.ID, &event.Name, &event.Discription, &event.Location, &event.DateTime, &event.UserID)
+		if err != nil {
+			return nil, err
+		}
+
+		events = append(events, event)
+	}
+
+	return events, nil
+}
