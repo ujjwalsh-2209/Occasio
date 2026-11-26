@@ -9,7 +9,7 @@ type User struct {
 }
 
 func (u User) Save() error {
-	query := "INSERT INTO users(email, password) VLAUES(?, ?)"
+	query := "INSERT INTO users(email, password) VALUES(?, ?)"
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
 		return err

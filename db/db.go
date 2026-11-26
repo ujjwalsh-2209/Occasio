@@ -27,7 +27,7 @@ func createTables() {
 	createUsersTable := `
 	CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		email TEST NOT NUL UNIQUE,
+		email TEXT NOT NULL UNIQUE,
 		password TEXT NOT NULL	
 	)
 	`
@@ -44,8 +44,8 @@ func createTables() {
 		discription TEXT NOT NULL,
 		location TEXT NOT NULL,
 		dateTime DATETIME NOT NULL,
-		user_id INTEGER
-		FOREGIN KEY(user_id) REFRENCE users(id)
+		user_id INTEGER,
+		FOREIGN KEY(user_id) REFERENCES users(id)
 	)
 	`
 	_, err = DB.Exec(createEventsTable)
