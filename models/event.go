@@ -62,6 +62,10 @@ func GetAllEvents() ([]Event, error) {
 		events = append(events, event)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err // added temporary
+	}
+
 	return events, nil
 }
 
