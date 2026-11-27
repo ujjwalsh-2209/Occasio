@@ -43,5 +43,5 @@ func cancelRegistration(context *gin.Context) {
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "could not cancel registration"})
 		return
 	}
-	context.JSON(http.StatusCreated, gin.H{"message": "Cancelled"})
+	context.JSON(http.StatusOK, gin.H{"message": "Cancelled"})
 }
