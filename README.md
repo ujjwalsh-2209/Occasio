@@ -1,8 +1,10 @@
-# EventHub API
+# Occasio
 
-A RESTful backend, written in **Go**, for creating events and letting users register for them. It provides user signup and login with **JWT authentication**, full CRUD for events with owner-only edit/delete rules, and an event registration (RSVP) system, all backed by an embedded **SQLite** database.
+> A secure REST API for creating events and managing attendee registrations, built with Go.
 
-> Repository: `github.com/ujjwalsh-2209/event-booking`
+**Occasio** is a RESTful backend, written in **Go**, for creating events and letting users register for them. It provides user signup and login with **JWT authentication**, full CRUD for events with owner-only edit/delete rules, and an event registration (RSVP) system, all backed by an embedded **SQLite** database.
+
+> Repository: [`github.com/ujjwalsh-2209/Occasio`](https://github.com/ujjwalsh-2209/Occasio)
 
 ---
 
@@ -86,7 +88,7 @@ The code follows a simple layered design. Each layer only talks to the one below
 ## Project structure
 
 ```
-event-booking/
+Occasio/
 ├── main.go                 # Entry point: init DB, register routes, run server on :8081
 ├── go.mod / go.sum         # Module definition and dependency checksums
 ├── .gitignore              # Ignores binaries, test artifacts, .env, and api.db
@@ -248,8 +250,8 @@ Response `201`:
 ### Run locally
 
 ```bash
-git clone https://github.com/ujjwalsh-2209/event-booking.git
-cd event-booking
+git clone https://github.com/ujjwalsh-2209/Occasio.git
+cd Occasio
 
 go mod download
 go run .
@@ -260,8 +262,8 @@ The API is now available at **http://localhost:8081**. The SQLite file `api.db` 
 ### Build a binary
 
 ```bash
-CGO_ENABLED=1 go build -o event-booking .
-./event-booking
+CGO_ENABLED=1 go build -o occasio .
+./occasio
 ```
 
 ---
