@@ -28,7 +28,7 @@
 
 - **User accounts**: sign up with email and password, log in to receive a token.
 - **Secure passwords**: hashed with bcrypt (cost 14), never stored in plain text.
-- **JWT authentication**: HS256-signed tokens that expire after 2 hours.
+- **JWT authentication**: HS256-signed tokens that expire after 2 hours, signed with a secret read from the `JWT_SECRET` environment variable (never hardcoded).
 - **Event CRUD**: anyone can browse events; authenticated users can create them.
 - **Ownership rules**: only the user who created an event can update or delete it.
 - **Event registration**: authenticated users can register for an event and cancel their registration.
@@ -78,10 +78,11 @@ The code follows a simple layered design. Each layer only talks to the one below
 
 **Startup sequence (`main.go`)**
 
-1. `db.InitDB()` opens `api.db`, sets the connection pool (10 open / 5 idle) and creates the tables if they do not exist.
-2. `gin.Default()` creates the router with the built-in logger and panic-recovery middleware.
-3. `routes.RegisterRoutes(server)` attaches the public and protected routes.
-4. The server listens on **`:8081`**.
+1. `main` checks that the `JWT_SECRET` environment variable is set and exits with an error if it is missing.
+2. `db.InitDB()` opens `api.db`, sets the connection pool (10 open / 5 idle) and creates the tables if they do not exist.
+3. `gin.Default()` creates the router with the built-in logger and panic-recovery middleware.
+4. `routes.RegisterRoutes(server)` attaches the public and protected routes.
+5. The server listens on **`:8081`**.
 
 ---
 
@@ -89,7 +90,7 @@ The code follows a simple layered design. Each layer only talks to the one below
 
 ```
 Occasio/
-├── main.go                 # Entry point: init DB, register routes, run server on :8081
+├── main.go                 # Entry point: checks JWT_SECRET, inits DB, registers routes, runs server on :8081
 ├── go.mod / go.sum         # Module definition and dependency checksums
 ├── .gitignore              # Ignores binaries, test artifacts, .env, and api.db
 │
@@ -112,7 +113,7 @@ Occasio/
 │
 └── utils/
     ├── hash.go             # HashPassword / CheckPasswordHash (bcrypt, cost 14)
-    └── jwt.go              # GenerateToken / VerifyToken (HS256, 2h expiry)
+    └── jwt.go              # GenerateToken / VerifyToken (HS256, 2h expiry, secret from JWT_SECRET)
 ```
 
 ---
@@ -152,7 +153,7 @@ erDiagram
 ## Authentication flow
 
 1. `POST /signup` stores the user with a bcrypt-hashed password.
-2. `POST /login` checks the credentials and returns a JWT containing `email`, `userId`, and `exp` (now + 2 hours).
+2. `POST /login` checks the credentials and returns a JWT containing `email`, `userId`, and `exp` (now + 2 hours). The token is signed with HS256 using the secret from the `JWT_SECRET` environment variable.
 3. For protected routes, send that token in the **`Authorization`** header. The middleware currently expects the **raw token** (no `Bearer ` prefix).
 4. The middleware verifies the signature and expiry, checks that the signing method is HMAC, extracts `userId`, and stores it in the Gin context. Handlers read it with `context.GetInt64("userId")`.
 5. Missing or invalid tokens get `401 Unauthorized`.
@@ -242,6 +243,7 @@ Response `201`:
 ### Prerequisites
 
 - **Go** (version from `go.mod`, 1.27 or newer)
+- **A `JWT_SECRET` value** (any long random string; see [Configuration](#configuration)). The server will not start without it.
 - **A C compiler** (`gcc`). `go-sqlite3` uses CGO, so builds fail without one.
   - Linux: `sudo apt install build-essential`
   - macOS: `xcode-select --install`
@@ -254,21 +256,42 @@ git clone https://github.com/ujjwalsh-2209/Occasio.git
 cd Occasio
 
 go mod download
+
+# JWT_SECRET is required. Generate a random one and export it (Linux/macOS/Git Bash):
+export JWT_SECRET="$(openssl rand -base64 32)"
+
+go run .
+```
+
+On **Windows PowerShell**:
+
+```powershell
+$env:JWT_SECRET = "paste-a-long-random-string-here"
 go run .
 ```
 
 The API is now available at **http://localhost:8081**. The SQLite file `api.db` is created in the working directory on first run (and is git-ignored).
 
+### Configuration
+
+| Variable | Required | Description |
+|---|:---:|---|
+| `JWT_SECRET` | Yes | Secret used to sign and verify JWTs. Use a long random value and keep it out of Git. The server exits at startup if it is not set. |
+
+A `.env` file is git-ignored, but it is **not** loaded automatically. Set the variable in your shell (or load the file with a tool such as `godotenv`).
+
 ### Build a binary
 
 ```bash
 CGO_ENABLED=1 go build -o occasio .
-./occasio
+JWT_SECRET="your-long-random-secret" ./occasio
 ```
 
 ---
 
 ## Try it with curl
+
+Start the server first, with `JWT_SECRET` set (see [Getting started](#getting-started)).
 
 ```bash
 # 1. Create a user
@@ -307,6 +330,7 @@ You can also import these requests into Postman or Insomnia. Remember to set the
 - **bcrypt cost 14** favours security over speed (signup and login each take noticeable CPU time).
 - **Generic login error** ("Credentials invalid") is returned for both unknown email and wrong password, so attackers cannot discover which emails exist.
 - **Embedded SQLite** means no external services are needed to run or demo the project.
+- **Secrets from the environment**: the JWT signing key is never stored in the code, and the app refuses to start without it (fail fast instead of running with an empty key).
 
 ---
 
@@ -316,7 +340,9 @@ This is a solid foundation; the items below are what I would tackle next, in pri
 
 ### Correctness and security (highest priority)
 
-- [ ] **JWT secret is hardcoded** (`"supersecret"` in `utils/jwt.go`). Load it from an environment variable and rotate the current one.
+- [x] **JWT secret now comes from the `JWT_SECRET` environment variable**, and the server refuses to start without it.
+- [ ] **Remove the old secret from the file**: delete the commented-out `supersecret` line in `utils/jwt.go`. The old value is still in Git history, so treat it as public and never reuse it anywhere real.
+- [ ] **Unchecked claim read in `VerifyToken`**: `claims["userId"].(float64)` panics if the claim is missing or has the wrong type. Check the `ok` value, and pin the algorithm with `jwt.WithValidMethods([]string{"HS256"})`.
 - [ ] **Nil-pointer panic in `updateEvent`**: `event.UserID` is read *before* the error from `GetEventByID` is checked, so updating a non-existent event panics (Gin's recovery turns it into a 500). Check `err` first.
 - [ ] **Return proper status codes**: `404` when an event or row is not found (currently `500`), `403` for "not the owner" (currently `401`), `409` for a duplicate email on signup (currently `500`).
 - [ ] **Prevent duplicate registrations** by adding `UNIQUE(event_id, user_id)` to `registrations` and returning a clear error.
