@@ -348,6 +348,4 @@ This is a solid foundation; the items below are what I would tackle next, in pri
 
 ---
 
-## License
 
-No license has been chosen yet. Consider adding an `MIT` `LICENSE` file if you want others to use the project.
