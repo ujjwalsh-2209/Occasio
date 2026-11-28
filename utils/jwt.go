@@ -2,12 +2,14 @@ package utils
 
 import (
 	"errors"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const scretKey = "supersecret"
+// const scretKey = "supersecret"
+var secretKey = []byte(os.Getenv("JWT_SECRET"))
 
 func GenerateToken(email string, userId int64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -16,7 +18,8 @@ func GenerateToken(email string, userId int64) (string, error) {
 		"exp":    time.Now().Add(time.Hour * 2).Unix(),
 	})
 
-	return token.SignedString([]byte(scretKey))
+	// return token.SignedString([]byte(scretKey))
+	return token.SignedString(secretKey)
 }
 
 func VerifyToken(token string) (int64, error) {
@@ -28,7 +31,8 @@ func VerifyToken(token string) (int64, error) {
 			return nil, errors.New("unexpected signing method")
 		}
 
-		return []byte(scretKey), nil
+		// return []byte(scretKey), nil
+		return secretKey, nil
 	})
 	if err != nil {
 		return 0, errors.New("could not parse token")
